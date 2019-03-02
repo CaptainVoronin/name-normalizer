@@ -6,13 +6,14 @@ import java.io.IOException;
 import java.util.*;
 import com.univocity.parsers.csv.CsvParser;
 import com.univocity.parsers.csv.CsvParserSettings;
+import org.apache.commons.cli.*;
 import org.simmetrics.StringDistance;
 import org.simmetrics.metrics.Levenshtein;
 
 public class Main {
 
     private static float distnceLimit = 2.5f;
-    private static float rateLimit = .3f;
+    private static float rateLimit = .25f;
 
     static StringDistance metric;
 
@@ -21,26 +22,52 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        String file = "d:\\temp\\names\\names-3.csv";
+
+        Options ops = new Options();
+
+        ops.addRequiredOption( "i", "input", true, "" );
+        ops.addOption( "d", "distance", true, ""  );
+        ops.addOption( "r", "rate", true, ""  );
+
+        //String file = "d:\\temp\\names\\names-3.csv";
+        CommandLineParser parser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+        CommandLine cmd;
+        try {
+            cmd = parser.parse(ops, args);
+        } catch( ParseException e ) {
+            System.out.println(e.getMessage());
+            formatter.printHelp("utility-name", ops);
+            System.exit(1);
+            return;
+        }
+
         List<String> rows = null;
         try {
-            rows = read(file);
+            if( cmd.hasOption( 'd' ))
+                distnceLimit = Float.parseFloat( cmd.getOptionValue( 'd' ) );
+            if( cmd.hasOption( 'r' ) )
+                rateLimit = Float.parseFloat( cmd.getOptionValue( 'r' ) );
+
+            rows = read( cmd.getOptionValue( "input" ));
             clear(rows);
             Map<String, Usage> result = analyze(rows);
-            String name = buildName( result );
+            output( result );
+            List<Usage> order = OrderMaker.makeOrder( result.values() );
+            String name = buildName( order );
 
-            System.out.println(  name );
+            System.out.println( name );
 
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private static String buildName(Map<String,Usage> result)
+    private static String buildName(List<Usage> result)
     {
         List<Usage> list = new ArrayList<>();
 
-        for( Usage usage : result.values() )
+        for( Usage usage : result )
         {
             if( usage.getRate() < rateLimit )
                 continue;
@@ -65,8 +92,6 @@ public class Main {
     private static void output(Map<String, Usage> terms) {
         for (String term : terms.keySet()) {
             Usage usage = terms.get(term);
-            if( usage.getRate() < rateLimit )
-                continue;
             System.out.println(String.format("%f %s", usage.getRate(), usage.getOriginal()));
         }
     }
@@ -109,6 +134,11 @@ public class Main {
 
     private static float distance(String key, String token) {
         float dist = metric.distance(key.toLowerCase(), token.toLowerCase());
+        if( dist < distnceLimit )
+        {
+            if( dist > ((float) key.length() ) / 2 )
+                dist = 100;
+        }
         return dist;
     }
 
