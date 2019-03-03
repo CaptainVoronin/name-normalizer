@@ -1,152 +1,76 @@
 package com.nextbi.name_normalizer;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
+import java.sql.SQLException;
 import java.util.*;
+
+import com.nextbi.nor.NameNormalizer;
 import com.univocity.parsers.csv.CsvParser;
 import com.univocity.parsers.csv.CsvParserSettings;
+import com.univocity.parsers.csv.CsvWriter;
+import com.univocity.parsers.csv.CsvWriterSettings;
+import datareader.SQLProvider;
+import datareader.VarcharField;
 import org.apache.commons.cli.*;
-import org.simmetrics.StringDistance;
-import org.simmetrics.metrics.Levenshtein;
 
 public class Main {
 
-    private static float distnceLimit = 2.5f;
-    private static float rateLimit = .25f;
-
-    static StringDistance metric;
-
-    static {
-        metric = new Levenshtein();
-    }
-
     public static void main(String[] args) {
 
-        Options ops = new Options();
+/*        Options ops = new Options();
 
-        ops.addRequiredOption( "i", "input", true, "" );
-        ops.addOption( "d", "distance", true, ""  );
-        ops.addOption( "r", "rate", true, ""  );
+        ops.addRequiredOption("i", "input", true, "");
+        ops.addOption("d", "distance", true, "");
+        ops.addOption("r", "rate", true, "");
 
-        //String file = "d:\\temp\\names\\names-3.csv";
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
         CommandLine cmd;
+
         try {
             cmd = parser.parse(ops, args);
-        } catch( ParseException e ) {
+        } catch (ParseException e) {
             System.out.println(e.getMessage());
             formatter.printHelp("utility-name", ops);
             System.exit(1);
             return;
         }
 
-        List<String> rows = null;
+        List<String> rows = null;*/
         try {
-            if( cmd.hasOption( 'd' ))
-                distnceLimit = Float.parseFloat( cmd.getOptionValue( 'd' ) );
-            if( cmd.hasOption( 'r' ) )
-                rateLimit = Float.parseFloat( cmd.getOptionValue( 'r' ) );
+/*
+            if (cmd.hasOption('d'))
+                distnceLimit = Float.parseFloat(cmd.getOptionValue('d'));
+            if (cmd.hasOption('r'))
+                rateLimit = Float.parseFloat(cmd.getOptionValue('r'));
 
-            rows = read( cmd.getOptionValue( "input" ));
-            clear(rows);
-            Map<String, Usage> result = analyze(rows);
-            output( result );
-            List<Usage> order = OrderMaker.makeOrder( result.values() );
-            String name = buildName( order );
 
-            System.out.println( name );
+            rows = read(cmd.getOptionValue("input"));
+            NameNormalizer nn = new NameNormalizer();
+            String name = nn.normalize( rows );
+            System.out.println(name); */
 
-        } catch (IOException e) {
+            SQLProvider provider = new SQLProvider( "demo1.stand.nextbi.ru", "dev_import_data", "postgres", "123456" );
+
+            NameNormalizer nn = new NameNormalizer();
+            VarcharField keyField = new VarcharField( "INN_PLAT" );
+            VarcharField normalizeField = new VarcharField( "NAME_PLAT" );
+            VarcharField updateField = new VarcharField( "name_plat_norm" );
+            CsvWriterSettings set = new CsvWriterSettings();
+            CsvWriter logWriter = new CsvWriter(new FileOutputStream(new File( "d:\\temp\\names\\update.log" )), set);
+
+            NormilizationProcessor np = new NormilizationProcessor( provider, nn, logWriter, "old_payments", "transaction", keyField, normalizeField, updateField,"d:\\temp\\names\\update.log" );
+            provider.open();
+            while ( np.go() );
+            provider.close();
+            logWriter.close();
+            System.out.println( "Finished");
+
+        }
+        catch (SQLException e) {
             e.printStackTrace();
-        }
-    }
-
-    private static String buildName(List<Usage> result)
-    {
-        List<Usage> list = new ArrayList<>();
-
-        for( Usage usage : result )
-        {
-            if( usage.getRate() < rateLimit )
-                continue;
-            list.add( usage );
-        }
-
-        String name = "";
-        for( Usage usage : list )
-            name += usage.getOriginal() + " ";
-
-        return name;
-    }
-
-    private static Map<String, Usage> analyze(List<String> rows) {
-        Map<String, Usage> terms = new HashMap<>();
-        for (String row : rows) {
-            calcRate(rows.size(), terms, row);
-        }
-        return terms;
-    }
-
-    private static void output(Map<String, Usage> terms) {
-        for (String term : terms.keySet()) {
-            Usage usage = terms.get(term);
-            System.out.println(String.format("%f %s", usage.getRate(), usage.getOriginal()));
-        }
-    }
-
-    private static void calcRate(int size, Map<String, Usage> terms, String row) {
-
-        String[] tokens = row.split(" ");
-        int pos = 0;
-        for (String token : tokens) {
-            if (token.trim().length() == 0)
-                continue;
-
-            Position p = new Position( tokens.length, pos );
-
-            Usage usage = null;
-            if ((usage = terms.get(token)) != null) {
-                usage.incUsage();
-            } else {
-                if ((usage = findSimilar(terms, token)) == null) {
-                    usage = new Usage(size, token );
-                    terms.put(token, usage);
-                }
-                usage.incUsage();
-            }
-            usage.addPos( p );
-
-            pos++;
-        }
-    }
-
-    private static Usage findSimilar(Map<String, Usage> terms, String token) {
-        Usage usage = null;
-        Set<String> keys = terms.keySet();
-        for (String key : keys) {
-            if (distance(key, token) < distnceLimit)
-                usage = terms.get(key);
-        }
-        return usage;
-    }
-
-    private static float distance(String key, String token) {
-        float dist = metric.distance(key.toLowerCase(), token.toLowerCase());
-        if( dist < distnceLimit )
-        {
-            if( dist > ((float) key.length() ) / 2 )
-                dist = 100;
-        }
-        return dist;
-    }
-
-    private static void clear(List<String> rows) {
-        for (int i = 0; i < rows.size(); i++) {
-            String row = rows.get(i);
-            row = row.replaceAll("[^a-zA-Zа-яА-Я0-9]", " ").trim();
-            rows.set(i, row);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
         }
     }
 

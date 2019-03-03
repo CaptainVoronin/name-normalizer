@@ -1,4 +1,4 @@
-package com.nextbi.name_normalizer;
+package com.nextbi.nor;
 
 import java.util.*;
 
@@ -26,10 +26,7 @@ public class OrderMaker
         }
 
         List<Usage> result = new ArrayList<>();
-
-        for( Usage u : order.values() )
-            result.add( u );
-
+        result.addAll( order.values() );
         return result;
     }
 

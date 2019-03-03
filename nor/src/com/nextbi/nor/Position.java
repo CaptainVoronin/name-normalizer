@@ -1,4 +1,4 @@
-package com.nextbi.name_normalizer;
+package com.nextbi.nor;
 
 public class Position {
 

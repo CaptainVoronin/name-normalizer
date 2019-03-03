@@ -1,38 +1,32 @@
-package com.nextbi.name_normalizer;
+package com.nextbi.nor;
 
 import java.util.ArrayList;
 import java.util.List;
 
 class Usage
 {
-    private float rate;
-    private int total;
+    private float weight;
     String original;
     List<Position > positions;
 
     public float getRate() {
-        return rate;
+        return weight;
     }
 
-    public int getTotal() {
-        return total;
-    }
 
     public int arraySize;
 
     public Usage (int arraySize, String original )
     {
-        rate = 0;
-        total = 0;
+        weight = 0;
         this.arraySize = arraySize;
         this.original = original;
         positions = new ArrayList<>();
     }
 
-    public void incUsage( )
+    public void incWeight( float weight )
     {
-        total++;
-        rate = (( float ) total ) / arraySize;
+        this.weight += weight;
     }
 
     public String getOriginal()

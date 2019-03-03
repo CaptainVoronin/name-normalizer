@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/name-normalizer.iml" filepath="$PROJECT_DIR$/name-normalizer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/nor/nor.iml" filepath="$PROJECT_DIR$/nor/nor.iml" />
     </modules>
   </component>
 </project>
